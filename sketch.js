@@ -384,6 +384,13 @@ document.getElementById('exit-focus-btn').addEventListener('click', () => {
   setTimeout(() => window._p5Resize && window._p5Resize(), 50);
 });
 
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('focus-mode')) {
+    e.preventDefault();
+    document.getElementById('exit-focus-btn').click();
+  }
+});
+
 /* -- Spin --------------------------------------------------------------- */
 document.getElementById('spin-btn').addEventListener('click', () => {
   if (isSpinning || names.length === 0) return;
