@@ -32,6 +32,26 @@ const SLICE_COLORS = [
   '#8338EC','#3A86FF','#FF006E','#06D6A0','#118AB2'
 ];
 
+/* Returns an array of hex colors of length n with no two adjacent colors
+   the same (including the wrap-around from last slice back to first).     */
+function getSliceColors(n) {
+  if (n === 0) return [];
+  const c = SLICE_COLORS.length;
+  const result = [];
+  for (let i = 0; i < n; i++) {
+    let idx = i % c;
+    if (i > 0 && idx === result[i - 1]) idx = (idx + 1) % c;
+    result.push(idx);
+  }
+  // Fix circular adjacency: last slice must differ from first
+  if (n > 2 && result[n - 1] === result[0]) {
+    let idx = (result[n - 1] + 1) % c;
+    if (idx === result[n - 2]) idx = (idx + 1) % c;
+    result[n - 1] = idx;
+  }
+  return result.map(i => SLICE_COLORS[i]);
+}
+
 /* -- Shared state (used by both p5 and plain JS) ----------------------- */
 let names          = getDefaultNames();
 let wheelAngle     = 0;
@@ -107,6 +127,7 @@ new p5(function (p) {
     const r  = p.width * 0.43;
     const n  = names.length;
     const sliceAngle = p.TWO_PI / n;
+    const sliceColors = getSliceColors(n);
 
     // Subtle rim glow
     p.noFill();
@@ -123,7 +144,7 @@ new p5(function (p) {
       const endA   = startA + sliceAngle;
 
       // Slice fill
-      p.fill(SLICE_COLORS[i % SLICE_COLORS.length]);
+      p.fill(sliceColors[i]);
       p.stroke(15, 15, 26);
       p.strokeWeight(1.5);
       p.arc(0, 0, r * 2, r * 2, startA, endA, p.PIE);
