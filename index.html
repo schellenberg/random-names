@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random Name Picker</title>
+  <script src="p5.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>Random Name Picker</h1>
+    <button id="sound-btn">🔊 Sound On</button>
+    <button id="focus-btn">⛶ Focus Mode</button>
+  </header>
+  <button id="exit-focus-btn">☰ Edit Names</button>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Names</h2>
+        <span id="name-count">20 names</span>
+      </div>
+      <textarea id="name-list" spellcheck="false" placeholder="One name per line…"></textarea>
+      <div class="sidebar-actions">
+        <button class="btn-secondary" id="btn-reset">↺  Reset to defaults</button>
+        <button class="btn-secondary" id="btn-save-default">★  Save as default</button>
+        <button class="btn-secondary" id="btn-clear">✕  Clear all</button>
+        <button class="btn-secondary" id="btn-import">📥  Import Edsby CSV</button>
+      </div>
+    </aside>
+
+    <main class="wheel-area">
+      <div id="wheel-container"></div>
+      <p id="empty-msg">Add some names above to get started!</p>
+      <button id="spin-btn">SPIN!</button>
+    </main>
+  </div>
+
+  <!-- Winner modal -->
+  <div id="winner-overlay">
+    <div class="winner-card">
+      <div class="winner-name-display" id="winner-name-display"></div>
+      <div class="remaining-info" id="remaining-info"></div>
+      <div class="modal-actions">
+        <button class="btn-remove" id="btn-remove">Remove &amp; Spin Again</button>
+        <button class="btn-keep"   id="btn-keep">Keep &amp; Spin Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import modal -->
+  <div id="import-overlay">
+    <div class="import-card">
+      <h2>Import Edsby CSV</h2>
+      <p>Export your class list from Edsby (Student List → Export),<br>then drop the file below or click to browse.</p>
+      <details style="text-align:left; margin-bottom:18px; font-size:0.78rem; color:#5a5a90; background:#0f0f1a; border:1.5px solid #2a2a4e; border-radius:10px; padding:10px 14px; cursor:pointer;">
+        <summary style="color:#7c7cad; font-weight:600; cursor:pointer; user-select:none;">Using a different SIS? ▸ CSV format requirements</summary>
+        <div style="margin-top:10px; line-height:1.7;">
+          <p style="margin-bottom:8px;">Two formats are accepted. Use whichever your SIS supports:</p>
+
+          <p style="color:#a0a0c0; margin-bottom:4px; font-weight:600;">Option 1 — Name column (preferred)</p>
+          <p style="margin-bottom:4px;">Include a <span style="font-family:monospace;color:#ff6584;">Name</span> column where each value is <em>LastName, FirstName</em>. Extra columns are ignored.</p>
+          <code style="display:block; color:#a0a0c0; background:#0a0a14; border-radius:6px; padding:7px 10px; margin-bottom:4px; font-size:0.72rem;">"Name","StudentID"<br>"Hardy, Grayer","12345"<br>"Wong, Eric","12346"</code>
+          <p style="margin-bottom:12px;">→ displays as <strong style="color:#ff6584;">Grayer H</strong>, <strong style="color:#ff6584;">Eric W</strong></p>
+
+          <p style="color:#a0a0c0; margin-bottom:4px; font-weight:600;">Option 2 — Separate FirstName &amp; LastName columns</p>
+          <p style="margin-bottom:4px;">Include both <span style="font-family:monospace;color:#ff6584;">FirstName</span> and <span style="font-family:monospace;color:#ff6584;">LastName</span> columns. Extra columns are ignored.</p>
+          <code style="display:block; color:#a0a0c0; background:#0a0a14; border-radius:6px; padding:7px 10px; margin-bottom:4px; font-size:0.72rem;">"FirstName","LastName","StudentID"<br>"Grayer","Hardy","12345"<br>"Eric","Wong","12346"</code>
+          <p style="margin-bottom:4px;">→ displays as <strong style="color:#ff6584;">Grayer H</strong>, <strong style="color:#ff6584;">Eric W</strong></p>
+
+          <p style="margin-top:8px; color:#3a3a6e;">Column headers are case-insensitive. Values may be quoted or unquoted.</p>
+        </div>
+      </details>
+      <div id="drop-zone">
+        <div class="drop-icon">📄</div>
+        Drop CSV file here<br><small>or click to browse</small>
+        <input type="file" id="csv-file-input" accept=".csv,text/csv" />
+      </div>
+      <div id="import-error"></div>
+      <button class="import-cancel" id="import-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <script src="sketch.js"></script>
+</body>
+</html>
