@@ -377,3 +377,44 @@ body.focus-mode #exit-focus-btn { display: block; }
   pointer-events: none;
 }
 .wheel-area { position: relative; }
+
+/* -- Mobile layout (≤ 700 px) ------------------------------------------ */
+@media (max-width: 700px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .layout {
+    flex-direction: column;
+    overflow: visible;
+    flex: none;
+  }
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-top: 2px solid #2a2a4e;
+  }
+  #name-list {
+    min-height: 160px; /* ~6 names at mobile font size */
+  }
+  #spin-btn {
+    order: -1;
+    margin-top: 12px;
+  }
+  body.focus-mode #spin-btn {
+    margin-top: 100px;
+  }
+  .wheel-area {
+    flex: none;
+    /* square canvas area + room for spin button */
+    height: calc(100vw + 70px);
+    padding: 12px 12px 16px;
+    gap: 14px;
+  }
+  .winner-card {
+    width: min(420px, calc(100vw - 32px));
+    padding: 30px 22px;
+  }
+}

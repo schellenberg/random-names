@@ -154,12 +154,13 @@ new p5(function (p) {
       p.rotate(startA + sliceAngle / 2);
       p.rotate(p.PI);   // flip: text now reads left->right when slice is on the left
 
-      const fontSize = p.constrain(p.map(n, 4, 28, 44, 18), 16, 48);
+      const scaleFactor = p.constrain(p.width / 600, 0.45, 1);
+      const fontSize = p.constrain(p.map(n, 4, 28, 44, 18) * scaleFactor, 11, 48);
       p.textSize(fontSize);
       p.textStyle(p.BOLD);
       p.textAlign(p.LEFT, p.CENTER);
 
-      const maxChars = Math.round(p.map(n, 4, 28, 18, 7));
+      const maxChars = Math.round(p.map(n, 4, 28, 18, 7) * scaleFactor);
       let label = names[i].length > maxChars
         ? names[i].slice(0, maxChars - 1) + '…'
         : names[i];
@@ -579,6 +580,11 @@ function showImportError(msg) {
   // Make sure the import modal is open so the error is visible
   document.getElementById('import-overlay').classList.add('active');
 }
+
+/* -- Resize ------------------------------------------------------------- */
+window.addEventListener('resize', () => {
+  window._p5Resize && window._p5Resize();
+});
 
 /* -- Init --------------------------------------------------------------- */
 syncUI();
