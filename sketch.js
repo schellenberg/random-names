@@ -94,7 +94,8 @@ new p5(function (p) {
 
       // Tick sound each time a new slice passes the pointer
       if (names.length > 0) {
-        const sa = p.TWO_PI / names.length;
+        const tickSliceCount = names.length === 1 ? 2 : names.length;
+        const sa = p.TWO_PI / tickSliceCount;
         const la = ((3 * p.HALF_PI - wheelAngle) % p.TWO_PI + p.TWO_PI) % p.TWO_PI;
         const cs = Math.floor(la / sa);
         if (cs !== lastTickSlice) { lastTickSlice = cs; playTick(spinVelocity); }
@@ -267,7 +268,12 @@ function showWinner(name) {
   document.getElementById('remaining-info').textContent =
     left > 0 ? `${left} name${left !== 1 ? 's' : ''} remaining if removed`
              : 'This is the last name on the wheel!';
-  document.getElementById('btn-remove').style.display = names.length > 1 ? '' : 'none';
+  const removeBtn = document.getElementById('btn-remove');
+  const keepBtn = document.getElementById('btn-keep');
+  const isFinalChoice = names.length === 1;
+  removeBtn.style.display = isFinalChoice ? 'none' : '';
+  keepBtn.textContent = isFinalChoice ? 'Return to Edit Mode' : 'Keep & Spin Again';
+  document.querySelector('.modal-actions').classList.toggle('single-action', isFinalChoice);
   document.getElementById('winner-overlay').classList.add('active');
   document.getElementById('spin-btn').disabled = false;
   playCheer();
@@ -276,6 +282,18 @@ function showWinner(name) {
 function closeModal() {
   document.getElementById('winner-overlay').classList.remove('active');
   window._p5Redraw && window._p5Redraw();
+}
+
+function setFocusMode(enabled) {
+  document.body.classList.toggle('focus-mode', enabled);
+  setTimeout(() => window._p5Resize && window._p5Resize(), 50);
+}
+
+function returnToEditMode() {
+  names = getDefaultNames();
+  syncUI();
+  closeModal();
+  setFocusMode(false);
 }
 
 function syncUI() {
@@ -377,12 +395,10 @@ document.getElementById('sound-btn').addEventListener('click', () => {
 
 /* -- Focus / fullscreen mode ------------------------------------------- */
 document.getElementById('focus-btn').addEventListener('click', () => {
-  document.body.classList.add('focus-mode');
-  setTimeout(() => window._p5Resize && window._p5Resize(), 50);
+  setFocusMode(true);
 });
 document.getElementById('exit-focus-btn').addEventListener('click', () => {
-  document.body.classList.remove('focus-mode');
-  setTimeout(() => window._p5Resize && window._p5Resize(), 50);
+  setFocusMode(false);
 });
 
 document.addEventListener('keydown', (e) => {
@@ -423,7 +439,13 @@ document.getElementById('btn-remove').addEventListener('click', () => {
   closeModal();
 });
 
-document.getElementById('btn-keep').addEventListener('click', closeModal);
+document.getElementById('btn-keep').addEventListener('click', () => {
+  if (names.length === 1) {
+    returnToEditMode();
+    return;
+  }
+  closeModal();
+});
 
 /* -- Name list textarea ------------------------------------------------- */
 document.getElementById('name-list').addEventListener('input', (e) => {
