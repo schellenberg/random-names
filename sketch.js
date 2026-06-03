@@ -6,23 +6,73 @@ const BUILTIN_DEFAULT_NAMES = [
   'Patricia', 'Quinn', 'Rachel', 'Samuel', 'Tina'
 ];
 
-const LS_KEY = 'rnp_default_names';
+const LS_CLASSES_KEY = 'rnp_classes';
+const LS_KEY_LEGACY  = 'rnp_default_names'; // kept for one-time migration
 
-function getDefaultNames() {
-  try {
-    const saved = localStorage.getItem(LS_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {}
-  return [...BUILTIN_DEFAULT_NAMES];
+function generateId() {
+  return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
 
-function saveAsDefault() {
+function getClassStore() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(names));
-    const btn = document.getElementById('btn-save-default');
-    btn.textContent = '✔  Saved!';
-    setTimeout(() => { btn.textContent = '★  Save as default'; }, 1800);
+    const raw = localStorage.getItem(LS_CLASSES_KEY);
+    if (raw) {
+      const store = JSON.parse(raw);
+      if (store && Array.isArray(store.classes) && store.classes.length > 0) return store;
+    }
   } catch (e) {}
+  return migrateAndCreateStore();
+}
+
+function migrateAndCreateStore() {
+  let defaultNames = [...BUILTIN_DEFAULT_NAMES];
+  try {
+    const legacy = localStorage.getItem(LS_KEY_LEGACY);
+    if (legacy) { defaultNames = JSON.parse(legacy); localStorage.removeItem(LS_KEY_LEGACY); }
+  } catch (e) {}
+  const first = { id: generateId(), name: 'My Class', names: defaultNames };
+  const store  = { classes: [first], activeId: first.id };
+  persistStore(store);
+  return store;
+}
+
+function persistStore(store) {
+  try { localStorage.setItem(LS_CLASSES_KEY, JSON.stringify(store)); } catch (e) {}
+}
+
+function getActiveClass(store) {
+  store = store || getClassStore();
+  return store.classes.find(c => c.id === store.activeId) || store.classes[0] || null;
+}
+
+function getDefaultNames() {
+  const cls = getActiveClass();
+  return cls ? [...cls.names] : [...BUILTIN_DEFAULT_NAMES];
+}
+
+function saveCurrentClass() {
+  const store = getClassStore();
+  const cls   = getActiveClass(store);
+  if (!cls) return;
+  cls.names = [...names];
+  persistStore(store);
+  const btn = document.getElementById('btn-save-default');
+  btn.textContent = '✔  Saved!';
+  setTimeout(() => { btn.textContent = '💾  Save class'; }, 1800);
+}
+
+function renderClassSelector() {
+  const store  = getClassStore();
+  const select = document.getElementById('class-select');
+  select.innerHTML = '';
+  store.classes.forEach(cls => {
+    const opt       = document.createElement('option');
+    opt.value       = cls.id;
+    opt.textContent = cls.name;
+    if (cls.id === store.activeId) opt.selected = true;
+    select.appendChild(opt);
+  });
+  document.getElementById('btn-delete-class').disabled = store.classes.length <= 1;
 }
 
 const SLICE_COLORS = [
@@ -249,7 +299,8 @@ new p5(function (p) {
   p.mousePressed = function () {
     const anyModalOpen =
       document.getElementById('import-overlay').classList.contains('active') ||
-      document.getElementById('winner-overlay').classList.contains('active');
+      document.getElementById('winner-overlay').classList.contains('active') ||
+      document.getElementById('dialog-overlay').classList.contains('active');
     if (anyModalOpen) return;
     const cx = p.width / 2, cy = p.height / 2;
     const r  = p.width * 0.43;
@@ -460,7 +511,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   syncUI();
 });
 
-document.getElementById('btn-save-default').addEventListener('click', saveAsDefault);
+document.getElementById('btn-save-default').addEventListener('click', saveCurrentClass);
 
 document.getElementById('btn-clear').addEventListener('click', () => {
   names = [];
@@ -469,15 +520,147 @@ document.getElementById('btn-clear').addEventListener('click', () => {
 
 document.getElementById('btn-import').addEventListener('click', openImportModal);
 
+/* -- Custom dialog (replaces prompt / confirm) --------------------------- */
+
+let _dialogResolve = null;
+
+(function setupDialog() {
+  const overlay  = document.getElementById('dialog-overlay');
+  const input    = document.getElementById('dialog-input');
+  const confirmBtn = document.getElementById('dialog-confirm');
+  const cancelBtn  = document.getElementById('dialog-cancel');
+
+  function close(value) {
+    overlay.classList.remove('active');
+    if (_dialogResolve) { _dialogResolve(value); _dialogResolve = null; }
+  }
+
+  confirmBtn.addEventListener('click', () => {
+    close(input.classList.contains('visible') ? input.value : true);
+  });
+  cancelBtn.addEventListener('click', () => close(null));
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')  { e.preventDefault(); confirmBtn.click(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelBtn.click();  }
+  });
+
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); cancelBtn.click(); }
+  });
+})();
+
+function showDialog({ title, body = '', placeholder = '', defaultValue = '', confirmLabel = 'OK', confirmDanger = false }) {
+  return new Promise(resolve => {
+    _dialogResolve = resolve;
+    document.getElementById('dialog-title').textContent   = title;
+    document.getElementById('dialog-body').textContent    = body;
+    const confirmBtn = document.getElementById('dialog-confirm');
+    const input      = document.getElementById('dialog-input');
+    const isPrompt   = placeholder !== false;
+
+    confirmBtn.textContent = confirmLabel;
+    confirmBtn.style.background = confirmDanger
+      ? 'linear-gradient(135deg,#ff6584,#ff3a60)'
+      : 'linear-gradient(135deg,#4ecdc4,#3ab5ad)';
+
+    if (isPrompt) {
+      input.placeholder = placeholder;
+      input.value       = defaultValue;
+      input.classList.add('visible');
+    } else {
+      input.classList.remove('visible');
+    }
+
+    document.getElementById('dialog-overlay').classList.add('active');
+    if (isPrompt) setTimeout(() => { input.focus(); input.select(); }, 50);
+    else setTimeout(() => document.getElementById('dialog-confirm').focus(), 50);
+  });
+}
+
+
+
+document.getElementById('class-select').addEventListener('change', (e) => {
+  switchToClass(e.target.value);
+});
+
+document.getElementById('btn-new-class').addEventListener('click', async () => {
+  const className = await showDialog({ title: 'New Class', placeholder: 'e.g. Period 1 — Math', confirmLabel: 'Create' });
+  if (!className || !className.trim()) return;
+  const store  = getClassStore();
+  const newCls = { id: generateId(), name: className.trim(), names: [] };
+  store.classes.push(newCls);
+  store.activeId = newCls.id;
+  persistStore(store);
+  names = [];
+  syncUI();
+  renderClassSelector();
+});
+
+document.getElementById('btn-rename-class').addEventListener('click', async () => {
+  const store = getClassStore();
+  const cls   = getActiveClass(store);
+  if (!cls) return;
+  const newName = await showDialog({ title: 'Rename Class', placeholder: 'Class name', defaultValue: cls.name, confirmLabel: 'Rename' });
+  if (!newName || !newName.trim()) return;
+  cls.name = newName.trim();
+  persistStore(store);
+  renderClassSelector();
+});
+
+document.getElementById('btn-delete-class').addEventListener('click', async () => {
+  const store = getClassStore();
+  const cls   = getActiveClass(store);
+  if (!cls) return;
+  const confirmed = await showDialog({
+    title: `Delete "${cls.name}"?`,
+    body: 'This cannot be undone.',
+    placeholder: false,
+    confirmLabel: 'Delete',
+    confirmDanger: true,
+  });
+  if (!confirmed) return;
+  store.classes = store.classes.filter(c => c.id !== cls.id);
+  if (store.classes.length === 0) {
+    const fresh = { id: generateId(), name: 'My Class', names: [...BUILTIN_DEFAULT_NAMES] };
+    store.classes = [fresh];
+    store.activeId = fresh.id;
+  } else {
+    store.activeId = store.classes[0].id;
+  }
+  persistStore(store);
+  names = [...(getActiveClass(store).names)];
+  syncUI();
+  renderClassSelector();
+});
+
+function switchToClass(id) {
+  const store = getClassStore();
+  const cls   = store.classes.find(c => c.id === id);
+  if (!cls) return;
+  store.activeId = id;
+  persistStore(store);
+  names = [...cls.names];
+  syncUI();
+  renderClassSelector();
+}
+
 /* -- Edsby CSV import --------------------------------------------------- */
 
+let pendingImportNames = null;
+
 function openImportModal() {
-  document.getElementById('import-error').textContent = '';
+  pendingImportNames = null;
+  document.getElementById('import-error').textContent  = '';
+  document.getElementById('import-status').textContent = '';
+  document.getElementById('import-class-name').value   = '';
+  document.getElementById('btn-do-import').disabled    = true;
   document.getElementById('import-overlay').classList.add('active');
 }
 function closeImportModal() {
   document.getElementById('import-overlay').classList.remove('active');
   document.getElementById('csv-file-input').value = '';
+  pendingImportNames = null;
 }
 
 document.getElementById('import-cancel').addEventListener('click', closeImportModal);
@@ -519,7 +702,7 @@ document.addEventListener('drop', (e) => {
   wheelArea.classList.remove('drag-active');
   if (document.getElementById('import-overlay').classList.contains('active')) return;
   const file = e.dataTransfer.files[0];
-  if (file) handleCSVFile(file);
+  if (file) { openImportModal(); handleCSVFile(file); }
 });
 
 function handleCSVFile(file) {
@@ -531,13 +714,54 @@ function handleCSVFile(file) {
   reader.onload = (e) => {
     const parsed = parseEdsbyCSV(e.target.result);
     if (parsed.error) { showImportError(parsed.error); return; }
-    names = parsed.names;
-    saveAsDefault();
-    syncUI();
-    closeImportModal();
+    pendingImportNames = parsed.names;
+    const nameInput = document.getElementById('import-class-name');
+    if (!nameInput.value.trim()) {
+      nameInput.value = file.name.replace(/\.csv$/i, '').replace(/[_\-]+/g, ' ').trim();
+    }
+    document.getElementById('import-error').textContent  = '';
+    document.getElementById('import-status').textContent =
+      `✓ ${parsed.names.length} name${parsed.names.length !== 1 ? 's' : ''} found`;
+    document.getElementById('btn-do-import').disabled = false;
   };
   reader.readAsText(file);
 }
+
+async function doImport() {
+  if (!pendingImportNames) return;
+  const nameInput = document.getElementById('import-class-name');
+  const className = nameInput.value.trim();
+  if (!className) {
+    document.getElementById('import-error').textContent = 'Please enter a class name.';
+    nameInput.focus();
+    return;
+  }
+  const store      = getClassStore();
+  let   targetCls  = store.classes.find(c => c.name.toLowerCase() === className.toLowerCase());
+  if (targetCls) {
+    const confirmed = await showDialog({
+      title: `Replace "${targetCls.name}"?`,
+      body: 'A class with this name already exists. Replace its names?',
+      placeholder: false,
+      confirmLabel: 'Replace',
+      confirmDanger: true,
+    });
+    if (!confirmed) return;
+    targetCls.names = [...pendingImportNames];
+    store.activeId  = targetCls.id;
+  } else {
+    const newCls = { id: generateId(), name: className, names: [...pendingImportNames] };
+    store.classes.push(newCls);
+    store.activeId = newCls.id;
+  }
+  persistStore(store);
+  names = [...pendingImportNames];
+  syncUI();
+  renderClassSelector();
+  closeImportModal();
+}
+
+document.getElementById('btn-do-import').addEventListener('click', doImport);
 
 function parseEdsbyCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -609,4 +833,5 @@ window.addEventListener('resize', () => {
 });
 
 /* -- Init --------------------------------------------------------------- */
+renderClassSelector();
 syncUI();

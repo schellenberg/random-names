@@ -26,10 +26,21 @@
         <h2>Names</h2>
         <span id="name-count">20 names</span>
       </div>
+      <div class="class-manager">
+        <div class="class-manager-header">
+          <span class="section-label">CLASS</span>
+          <div class="class-manager-btns">
+            <button class="btn-icon" id="btn-new-class" title="New class">＋</button>
+            <button class="btn-icon" id="btn-rename-class" title="Rename class">✎</button>
+            <button class="btn-icon btn-icon-danger" id="btn-delete-class" title="Delete class">🗑</button>
+          </div>
+        </div>
+        <select id="class-select" aria-label="Select class"></select>
+      </div>
       <textarea id="name-list" spellcheck="false" placeholder="One name per line…"></textarea>
       <div class="sidebar-actions">
-        <button class="btn-secondary" id="btn-reset">↺  Reset to defaults</button>
-        <button class="btn-secondary" id="btn-save-default">★  Save as default</button>
+        <button class="btn-secondary" id="btn-reset">↺  Reload class</button>
+        <button class="btn-secondary" id="btn-save-default">💾  Save class</button>
         <button class="btn-secondary" id="btn-clear">✕  Clear all</button>
         <button class="btn-secondary" id="btn-import">📥  Import Edsby CSV</button>
       </div>
@@ -50,6 +61,19 @@
       <div class="modal-actions">
         <button class="btn-remove" id="btn-remove">Remove &amp; Spin Again</button>
         <button class="btn-keep"   id="btn-keep">Keep &amp; Spin Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- General-purpose dialog modal -->
+  <div id="dialog-overlay">
+    <div class="dialog-card">
+      <div class="dialog-title" id="dialog-title"></div>
+      <div class="dialog-body"  id="dialog-body"></div>
+      <input type="text" id="dialog-input" autocomplete="off" />
+      <div class="dialog-actions">
+        <button class="btn-keep"   id="dialog-cancel">Cancel</button>
+        <button class="btn-remove" id="dialog-confirm">OK</button>
       </div>
     </div>
   </div>
@@ -77,13 +101,21 @@
           <p style="margin-top:8px; color:#3a3a6e;">Column headers are case-insensitive. Values may be quoted or unquoted.</p>
         </div>
       </details>
+      <div class="import-field">
+        <label for="import-class-name">Class name</label>
+        <input type="text" id="import-class-name" placeholder="e.g. Period 1 — Math" autocomplete="off" />
+      </div>
       <div id="drop-zone">
         <div class="drop-icon">📄</div>
         Drop CSV file here<br><small>or click to browse</small>
         <input type="file" id="csv-file-input" accept=".csv,text/csv" />
       </div>
+      <div id="import-status"></div>
       <div id="import-error"></div>
-      <button class="import-cancel" id="import-cancel">Cancel</button>
+      <div class="import-actions">
+        <button class="import-cancel" id="import-cancel">Cancel</button>
+        <button class="import-confirm" id="btn-do-import" disabled>Import</button>
+      </div>
     </div>
   </div>
 
